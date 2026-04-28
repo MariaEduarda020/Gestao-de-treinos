@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>GymTrack - Gestão de Treinos Profissional</title>
+    <style>
+        :root {
+            --primary: #346ace;
+            --secondary: #27aea7;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --success: #2ecc71;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--light); margin: 0; display: flex; }
+        
+        /* Sidebar */
+        .sidebar { width: 250px; background: var(--primary); height: 100vh; color: white; padding: 20px; position: fixed; }
+        .sidebar h2 { text-align: center; border-bottom: 2px solid var(--secondary); padding-bottom: 10px; }
+        .menu-item { padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu-item:hover { background: var(--secondary); }
+
+        /* Content */
+        .main-content { flex: 1; padding: 30px; margin-left: 290px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--dark); }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .btn { background: var(--secondary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-block; }
+        .btn:hover { opacity: 0.9; }
+        .btn-cancel { background: #95a5a6; margin-left: 10px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table th, table td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        table th { background: var(--primary); color: white; }
+        
+        .section-title { color: var(--primary); border-left: 5px solid var(--secondary); padding-left: 10px; margin-bottom: 20px; }
+        .btn-action { cursor: pointer; background: none; border: none; font-weight: bold; text-decoration: underline; padding: 0 5px; }
+        .btn-edit { color: var(--primary); }
+        .btn-delete { color: var(--danger); }
+        
+        .dia-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        
+        /* IMC Estilos */
+        .imc-resultado { font-size: 1.1em; font-weight: bold; margin-top: 10px; padding: 10px; border-radius: 5px; display: inline-block; }
+        .imc-ideal { background: var(--success); color: white; }
+        .imc-atencao { background: var(--warning); color: black; }
+        .imc-perigo { background: var(--danger); color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>GymTrack</h2>
+        <div class="menu-item" onclick="mostrarSecao('secao-alunos')">Alunos</div>
+        <div class="menu-item" onclick="mostrarSecao('secao-exercicios')">Exercícios</div>
+        <div class="menu-item" onclick="mostrarSecao('secao-treinos')">Montar Treino</div>
+        <div class="menu-item" onclick="mostrarSecao('secao-imc')">Avaliação Física (IMC)</div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="secao-alunos" class="conteudo">
+            <h2 class="section-title" id="tituloAlunos">Gerenciar Alunos</h2>
+            <div class="card">
+                <input type="hidden" id="alunoIdEdicao">
+                <div class="form-row">
+                    <div>
+                        <label>Nome do Aluno</label>
+                        <input type="text" id="nomeAluno" placeholder="Ex: João Silva">
+                    </div>
+                    <div>
+                        <label>Objetivo</label>
+                        <select id="objetivoAluno">
+                            <option>Hipertrofia</option>
+                            <option>Emagrecimento</option>
+                            <option>Condicionamento</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn" id="btnSalvarAluno" onclick="processarAluno()">Salvar Aluno</button>
+                <button class="btn btn-cancel" id="btnCancelaAluno" style="display:none;" onclick="resetarFormAluno()">Cancelar Edição</button>
+            </div>
+            <div class="card">
+                <table id="tabelaAlunos">
+                    <thead><tr><th>ID</th><th>Nome</th><th>Objetivo</th><th>Ações</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="secao-exercicios" class="conteudo" style="display:none;">
+            <h2 class="section-title">Catálogo de Exercícios</h2>
+            <div class="card">
+                <div class="form-row">
+                    <div>
+                        <label>Nome do Exercício</label>
+                        <input type="text" id="nomeExercicio" placeholder="Ex: Leg Press">
+                    </div>
+                    <div>
+                        <label>Grupo Muscular</label>
+                        <input type="text" id="grupoMuscular" placeholder="Ex: Pernas">
+                    </div>
+                </div>
+                <button class="btn" onclick="salvarExercicio()">Cadastrar Exercício</button>
+            </div>
+            <div class="card">
+                <table id="tabelaExercicios">
+                    <thead><tr><th>ID</th><th>Exercício</th><th>Grupo</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="secao-treinos" class="conteudo" style="display:none;">
+            <h2 class="section-title">Montar Ficha de Treino</h2>
+            <div class="card">
+                <div class="form-row">
+                    <div>
+                        <label>Selecionar Aluno</label>
+                        <select id="selectAlunoTreino"></select>
+                    </div>
+                    <div>
+                        <label>Dia da Semana</label>
+                        <select id="diaSemana">
+                            <option>Segunda-feira</option>
+                            <option>Terça-feira</option>
+                            <option>Quarta-feira</option>
+                            <option>Quinta-feira</option>
+                            <option>Sexta-feira</option>
+                            <option>Sábado</option>
+                            <option>Domingo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label>Exercício</label>
+                        <select id="selectExercicioTreino"></select>
+                    </div>
+                    <div><label>Séries</label><input type="number" id="series" value="3"></div>
+                    <div><label>Reps</label><input type="number" id="reps" value="12"></div>
+                    <div><label>Carga (kg)</label><input type="number" id="carga" value="10"></div>
+                </div>
+                <button class="btn" style="background: #e67e22;" onclick="vincularTreino()">Adicionar à Ficha</button>
+            </div>
+
+            <div class="card">
+                <h3>Visualização da Ficha</h3>
+                <div class="form-row">
+                    <select id="filtroAluno" onchange="listarTreinos()">
+                        <option value="">Selecione um aluno para ver o treino...</option>
+                    </select>
+                </div>
+                <table id="tabelaFicha">
+                    <thead><tr><th>Dia</th><th>Exercício</th><th>Séries</th><th>Reps</th><th>Carga</th><th>Ações</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="secao-imc" class="conteudo" style="display:none;">
+            <h2 class="section-title">Avaliação Física (IMC)</h2>
+            <div class="card">
+                <div class="form-row">
+                    <div>
+                        <label>Selecionar Aluno</label>
+                        <select id="selectAlunoIMC"></select>
+                    </div>
+                    <div>
+                        <label>Peso (kg)</label>
+                        <input type="number" id="peso" step="0.1" placeholder="Ex: 80.5">
+                    </div>
+                    <div>
+                        <label>Altura (m)</label>
+                        <input type="number" id="altura" step="0.01" placeholder="Ex: 1.75">
+                    </div>
+                </div>
+                <button class="btn" onclick="calcularIMC()">Calcular e Registrar</button>
+                
+                <div id="areaResultadoIMC" style="display:none; margin-top: 15px;">
+                    <strong>Resultado:</strong> <div id="resultadoIMC" class="imc-resultado"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Histórico de Avaliações</h3>
+                <table id="tabelaHistoricoIMC">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Peso</th>
+                            <th>Altura</th>
+                            <th>IMC</th>
+                            <th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- NAVEGAÇÃO ---
+        function mostrarSecao(id) {
+            document.querySelectorAll('.conteudo').forEach(div => div.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            atualizarSelects();
+            if(id === 'secao-imc') listarHistoricoIMC();
+        }
+
+        // --- GESTÃO DE ALUNOS ---
+        function processarAluno() {
+            const idEdicao = document.getElementById('alunoIdEdicao').value;
+            const nome = document.getElementById('nomeAluno').value;
+            const obj = document.getElementById('objetivoAluno').value;
+            
+            if(!nome) return alert("Nome é obrigatório!");
+
+            let alunos = JSON.parse(localStorage.getItem('alunos')) || [];
+
+            if(idEdicao) {
+                alunos = alunos.map(a => a.id == idEdicao ? {...a, nome, objetivo: obj} : a);
+                alert("Aluno atualizado!");
+            } else {
+                alunos.push({ id: Date.now(), nome, objetivo: obj });
+                alert("Aluno cadastrado!");
+            }
+
+            localStorage.setItem('alunos', JSON.stringify(alunos));
+            resetarFormAluno();
+            listarAlunos();
+            atualizarSelects();
+        }
+
+        function carregarAlunoParaEdicao(id) {
+            const alunos = JSON.parse(localStorage.getItem('alunos')) || [];
+            const aluno = alunos.find(a => a.id == id);
+            if(aluno) {
+                document.getElementById('alunoIdEdicao').value = aluno.id;
+                document.getElementById('nomeAluno').value = aluno.nome;
+                document.getElementById('objetivoAluno').value = aluno.objetivo;
+                document.getElementById('tituloAlunos').innerText = "Editar Aluno";
+                document.getElementById('btnSalvarAluno').innerText = "Atualizar Dados";
+                document.getElementById('btnCancelaAluno').style.display = "inline-block";
+                mostrarSecao('secao-alunos');
+                window.scrollTo(0,0);
+            }
+        }
+
+        function resetarFormAluno() {
+            document.getElementById('alunoIdEdicao').value = "";
+            document.getElementById('nomeAluno').value = "";
+            document.getElementById('tituloAlunos').innerText = "Gerenciar Alunos";
+            document.getElementById('btnSalvarAluno').innerText = "Salvar Aluno";
+            document.getElementById('btnCancelaAluno').style.display = "none";
+        }
+
+        function listarAlunos() {
+            const lista = JSON.parse(localStorage.getItem('alunos')) || [];
+            const tbody = document.querySelector('#tabelaAlunos tbody');
+            tbody.innerHTML = lista.map((a, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${a.nome}</td>
+                    <td>${a.objetivo}</td>
+                    <td><button class="btn-action btn-edit" onclick="carregarAlunoParaEdicao(${a.id})">Editar</button></td>
+                </tr>`).join('');
+        }
+
+        // --- GESTÃO DE EXERCÍCIOS ---
+        function salvarExercicio() {
+            const nome = document.getElementById('nomeExercicio').value;
+            const grupo = document.getElementById('grupoMuscular').value;
+            if(!nome) return alert("Nome do exercício é obrigatório!");
+
+            let exs = JSON.parse(localStorage.getItem('exercicios')) || [];
+            exs.push({ id: Date.now(), nome, grupo });
+            localStorage.setItem('exercicios', JSON.stringify(exs));
+            document.getElementById('nomeExercicio').value = "";
+            document.getElementById('grupoMuscular').value = "";
+            listarExercicios();
+            atualizarSelects();
+        }
+
+        function listarExercicios() {
+            const lista = JSON.parse(localStorage.getItem('exercicios')) || [];
+            const tbody = document.querySelector('#tabelaExercicios tbody');
+            tbody.innerHTML = lista.map((e, i) => `<tr><td>${i+1}</td><td>${e.nome}</td><td>${e.grupo}</td></tr>`).join('');
+        }
+
+        // --- GESTÃO DE TREINOS ---
+        function vincularTreino() {
+            const alunoId = document.getElementById('selectAlunoTreino').value;
+            const exId = document.getElementById('selectExercicioTreino').value;
+            const dia = document.getElementById('diaSemana').value;
+            const series = document.getElementById('series').value;
+            const reps = document.getElementById('reps').value;
+            const carga = document.getElementById('carga').value;
+
+            if(!alunoId || !exId) return alert("Selecione um aluno e um exercício!");
+
+            let treinos = JSON.parse(localStorage.getItem('treinos')) || [];
+            const ex = JSON.parse(localStorage.getItem('exercicios')).find(e => e.id == exId);
+
+            treinos.push({ idTreino: Date.now(), alunoId, dia, exNome: ex.nome, series, reps, carga });
+            localStorage.setItem('treinos', JSON.stringify(treinos));
+            alert("Exercício adicionado!");
+            listarTreinos();
+        }
+
+        function excluirTreino(idTreino) {
+            if(confirm("Deseja remover este exercício da ficha?")) {
+                let treinos = JSON.parse(localStorage.getItem('treinos')) || [];
+                treinos = treinos.filter(t => t.idTreino !== idTreino);
+                localStorage.setItem('treinos', JSON.stringify(treinos));
+                listarTreinos();
+            }
+        }
+
+        function listarTreinos() {
+            const alunoId = document.getElementById('filtroAluno').value;
+            const treinos = JSON.parse(localStorage.getItem('treinos')) || [];
+            const tbody = document.querySelector('#tabelaFicha tbody');
+            const filtrados = treinos.filter(t => t.alunoId == alunoId);
+            
+            tbody.innerHTML = filtrados.map(t => `
+                <tr>
+                    <td><span class="dia-badge">${t.dia}</span></td>
+                    <td>${t.exNome}</td>
+                    <td>${t.series}</td>
+                    <td>${t.reps}</td>
+                    <td>${t.carga}kg</td>
+                    <td><button class="btn-action btn-delete" onclick="excluirTreino(${t.idTreino})">Remover</button></td>
+                </tr>`).join('');
+        }
+
+        // --- GESTÃO DE IMC ---
+        function calcularIMC() {
+            const alunoId = document.getElementById('selectAlunoIMC').value;
+            const peso = parseFloat(document.getElementById('peso').value);
+            const altura = parseFloat(document.getElementById('altura').value);
+
+            if(!alunoId || !peso || !altura) return alert("Preencha todos os campos da avaliação!");
+
+            const imc = (peso / (altura * altura)).toFixed(2);
+            let situacao = "";
+            let classe = "";
+
+            if(imc < 18.5) { situacao = "Abaixo do peso"; classe = "imc-atencao"; }
+            else if(imc < 25) { situacao = "Peso normal"; classe = "imc-ideal"; }
+            else if(imc < 30) { situacao = "Sobrepeso"; classe = "imc-atencao"; }
+            else { situacao = "Obesidade"; classe = "imc-perigo"; }
+
+            // Exibir resultado na tela
+            const resDiv = document.getElementById('areaResultadoIMC');
+            const resBadge = document.getElementById('resultadoIMC');
+            resDiv.style.display = "block";
+            resBadge.innerText = `${imc} - ${situacao}`;
+            resBadge.className = `imc-resultado ${classe}`;
+
+            // Salvar histórico
+            const nomeAluno = document.getElementById('selectAlunoIMC').options[document.getElementById('selectAlunoIMC').selectedIndex].text;
+            let historico = JSON.parse(localStorage.getItem('historicoIMC')) || [];
+            historico.unshift({ nomeAluno, peso, altura, imc, situacao }); // Adiciona no início
+            localStorage.setItem('historicoIMC', JSON.stringify(historico));
+            
+            listarHistoricoIMC();
+        }
+
+        function listarHistoricoIMC() {
+            const historico = JSON.parse(localStorage.getItem('historicoIMC')) || [];
+            const tbody = document.querySelector('#tabelaHistoricoIMC tbody');
+            tbody.innerHTML = historico.map(h => `
+                <tr>
+                    <td>${h.nomeAluno}</td>
+                    <td>${h.peso}kg</td>
+                    <td>${h.altura}m</td>
+                    <td>${h.imc}</td>
+                    <td>${h.situacao}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- UTILITÁRIOS ---
+        function atualizarSelects() {
+            const alunos = JSON.parse(localStorage.getItem('alunos')) || [];
+            const exs = JSON.parse(localStorage.getItem('exercicios')) || [];
+            
+            const optAlunos = alunos.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+            
+            document.getElementById('selectAlunoTreino').innerHTML = optAlunos;
+            document.getElementById('filtroAluno').innerHTML = `<option value="">Selecione um aluno...</option>` + optAlunos;
+            document.getElementById('selectAlunoIMC').innerHTML = optAlunos;
+            document.getElementById('selectExercicioTreino').innerHTML = exs.map(e => `<option value="${e.id}">${e.nome}</option>`).join('');
+        }
+
+        window.onload = () => { 
+            listarAlunos(); 
+            listarExercicios(); 
+            atualizarSelects(); 
+        };
+    </script>
+
+</body>
+</html>
