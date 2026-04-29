@@ -33,7 +33,7 @@
         .btn:hover { opacity: 0.9; }
         .btn-cancel { background: #95a5a6; margin-left: 10px; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }
         table th, table td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
         table th { background: var(--primary); color: white; }
         
@@ -42,7 +42,7 @@
         .btn-edit { color: var(--primary); }
         .btn-delete { color: var(--danger); }
         
-        .dia-badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        .dia-titulo { background: var(--dark); color: white; padding: 10px; border-radius: 4px; margin-top: 20px; margin-bottom: 0; display: flex; align-items: center; }
         
         /* IMC Estilos */
         .imc-resultado { font-size: 1.1em; font-weight: bold; margin-top: 10px; padding: 10px; border-radius: 5px; display: inline-block; }
@@ -155,10 +155,7 @@
                         <option value="">Selecione um aluno para ver o treino...</option>
                     </select>
                 </div>
-                <table id="tabelaFicha">
-                    <thead><tr><th>Dia</th><th>Exercício</th><th>Séries</th><th>Reps</th><th>Carga</th><th>Ações</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <div id="containerFichas"></div>
             </div>
         </div>
 
@@ -212,6 +209,7 @@
             document.getElementById(id).style.display = 'block';
             atualizarSelects();
             if(id === 'secao-imc') listarHistoricoIMC();
+            if(id === 'secao-treinos') listarTreinos();
         }
 
         // --- GESTÃO DE ALUNOS ---
@@ -326,18 +324,68 @@
         function listarTreinos() {
             const alunoId = document.getElementById('filtroAluno').value;
             const treinos = JSON.parse(localStorage.getItem('treinos')) || [];
-            const tbody = document.querySelector('#tabelaFicha tbody');
-            const filtrados = treinos.filter(t => t.alunoId == alunoId);
+            const container = document.getElementById('containerFichas');
             
-            tbody.innerHTML = filtrados.map(t => `
-                <tr>
-                    <td><span class="dia-badge">${t.dia}</span></td>
-                    <td>${t.exNome}</td>
-                    <td>${t.series}</td>
-                    <td>${t.reps}</td>
-                    <td>${t.carga}kg</td>
-                    <td><button class="btn-action btn-delete" onclick="excluirTreino(${t.idTreino})">Remover</button></td>
-                </tr>`).join('');
+            container.innerHTML = ""; // Limpa a visualização anterior
+
+            if (!alunoId) return;
+
+            const filtrados = treinos.filter(t => t.alunoId == alunoId);
+
+            // Ordem cronológica dos dias
+            const ordemDias = [
+                "Segunda-feira", "Terça-feira", "Quarta-feira", 
+                "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"
+            ];
+
+            // Agrupa treinos por dia
+            const treinosAgrupados = filtrados.reduce((acc, treino) => {
+                if (!acc[treino.dia]) acc[treino.dia] = [];
+                acc[treino.dia].push(treino);
+                return acc;
+            }, {});
+
+            // Gera as tabelas para cada dia que possui conteúdo
+            ordemDias.forEach(dia => {
+                if (treinosAgrupados[dia]) {
+                    let htmlDia = `
+                        <div>
+                            <h4 class="dia-titulo">📅 ${dia}</h4>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Exercício</th>
+                                        <th>Séries</th>
+                                        <th>Reps</th>
+                                        <th>Carga</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${treinosAgrupados[dia].map(t => `
+                                        <tr>
+                                            <td><strong>${t.exNome}</strong></td>
+                                            <td>${t.series}</td>
+                                            <td>${t.reps}</td>
+                                            <td>${t.carga}kg</td>
+                                            <td>
+                                                <button class="btn-action btn-delete" onclick="excluirTreino(${t.idTreino})">
+                                                    Remover
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    container.innerHTML += htmlDia;
+                }
+            });
+
+            if (filtrados.length === 0) {
+                container.innerHTML = "<p style='margin-top:20px;'>Nenhum exercício cadastrado para este aluno.</p>";
+            }
         }
 
         // --- GESTÃO DE IMC ---
@@ -357,17 +405,15 @@
             else if(imc < 30) { situacao = "Sobrepeso"; classe = "imc-atencao"; }
             else { situacao = "Obesidade"; classe = "imc-perigo"; }
 
-            // Exibir resultado na tela
             const resDiv = document.getElementById('areaResultadoIMC');
             const resBadge = document.getElementById('resultadoIMC');
             resDiv.style.display = "block";
             resBadge.innerText = `${imc} - ${situacao}`;
             resBadge.className = `imc-resultado ${classe}`;
 
-            // Salvar histórico
             const nomeAluno = document.getElementById('selectAlunoIMC').options[document.getElementById('selectAlunoIMC').selectedIndex].text;
             let historico = JSON.parse(localStorage.getItem('historicoIMC')) || [];
-            historico.unshift({ nomeAluno, peso, altura, imc, situacao }); // Adiciona no início
+            historico.unshift({ nomeAluno, peso, altura, imc, situacao });
             localStorage.setItem('historicoIMC', JSON.stringify(historico));
             
             listarHistoricoIMC();
